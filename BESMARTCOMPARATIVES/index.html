@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Comparativo de Investimento / Financiamento</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root{
+    --bg:#F0F0F0; --card:#ffffff; --accent:#2e8b57; --muted:#9966FF;
+    --panel-padding:14px;
+    font-family: Inter, Roboto, Arial, sans-serif;
+  }
+  body{background:var(--bg); margin:0; padding:18px; color:#000000}
+  .container{max-width:1200px; margin:0 auto;}
+  .header-content { display:flex; align-items:center; gap:16px; margin-bottom:10px}
+  .logo{height:48px;width:auto}
+  .titulo{font-size:22px;margin:0;font-weight:700}
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
+  .chart-card{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 6px 18px rgba(191, 2, 248, 0.15)}
+  canvas{max-height:360px; width:100% !important}
+  .right-col{display:flex;flex-direction:column;gap:12px}
+  .box{background:var(--card);padding:var(--panel-padding);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.04)}
+  .box h3{margin:0 0 8px 0;font-size:14px}
+  .value{color:var(--accent);font-weight:700;font-size:18px}
+  .muted{color:var(--muted);font-size:13px}
+  .controls{display:flex;gap:12px;align-items:end;margin:12px 0;flex-wrap:wrap}
+  .control{background:#ffffff;border-radius:8px;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.03);display:flex;flex-direction:column}
+  .control label{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .control input,.control select{width:200px;padding:8px;border-radius:6px;border:1px solid #e6e6e6;font-size:14px}
+  .btn{padding:8px 12px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+  footer{margin-top:18px;font-size:13px;color:#444}
+  @media(max-width:980px){ .grid{grid-template-columns:1fr} .right-col{order:2} canvas{max-height:300px} }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-content">
+    <img src="images/besmart-logo.png" alt="Logo BeSmart" class="logo">
+    <h1 class="titulo">Tipos de investimento</h1>
+  </div>
+
+  <section class="controls" aria-label="Controles principais">
+    <div class="control">
+      <label for="segmento">Segmento</label>
+      <select id="segmento">
+        <option value="imoveis">Consórcio de Imóveis</option>
+        <option value="carros">Consórcio de Carros</option>
+      </select>
+    </div>
+
+    <div class="control">
+      <label for="credito">Crédito (R$)</label>
+      <input id="credito" type="number" value="100000" min="0" step="100" />
+    </div>
+
+    <div class="control" id="planoWrapper">
+      <label for="plano">Plano de venda</label>
+      <select id="plano">
+        <option value="1">100% DILUIDO (COM 11X) (FURO)</option>
+        <option value="0.5">50% DILUIDO (COM 11X) (FURO)</option>
+        <option value="0.25">25% DILUIDO (COM 11X) (FURO)</option>
+      </select>
+    </div>
+
+    <div style="align-self:center">
+      <button id="atualizar" class="btn">Atualizar</button>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="chart-card"><canvas id="compChart"></canvas></div>
+
+    <aside class="right-col" aria-label="Resultados">
+      <div class="box" id="boxConsorcio">
+        <h3>Consórcio (comparativo)</h3>
+        <div class="muted">Crédito contratado</div>
+        <div class="value" id="cons_credito">R$ 0,00</div>
+        <div class="muted" style="margin-top:8px">Parcela inicial</div>
+        <div class="value" id="cons_parcela">R$ 0,00</div>
+        <div class="muted" style="margin-top:6px">Total taxa de administração</div>
+        <div class="value" id="cons_taxa">R$ 0,00</div>
+      </div>
+
+      <div class="box" id="boxPrice">
+        <h3>Financiamento tabela (Price)</h3>
+        <div class="muted">Parcelas (mensal)</div>
+        <div class="value" id="priceParcel">R$ 0,00</div>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <div>
+            <div class="muted">Total pago</div>
+            <div class="value" id="priceTotal">R$ 0,00</div>
+          </div>
+          <div>
+            <div class="muted">Total de juros</div>
+            <div class="value" id="priceJuros">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="box" id="boxSAC">
+        <h3>Financiamento tabela (SAC)</h3>
+        <div class="muted">Parcela inicial / final</div>
+        <div class="value" id="sacPrimeira">R$ 0,00</div>
+        <div class="muted" style="margin-top:6px">Total pago</div>
+        <div class="value" id="sacTotal">R$ 0,00</div>
+        <div class="muted" style="margin-top:6px">Total de juros</div>
+        <div class="value" id="sacJuros">R$ 0,00</div>
+      </div>
+
+      <div class="box" id="boxCDC" style="display:none">
+        <h3>Financiamento CDC</h3>
+        <div class="muted">Parcelas (mensal)</div>
+        <div class="value" id="cdcParcel">R$ 0,00</div>
+        <div class="muted" style="margin-top:6px">Total pago</div>
+        <div class="value" id="cdcTotal">R$ 0,00</div>
+        <div class="muted" style="margin-top:6px">Total de juros</div>
+        <div class="value" id="cdcJuros">R$ 0,00</div>
+      </div>
+
+      <div class="box">
+        <h3>Simulação de Poupança</h3>
+        <div class="muted">Soma dos valores na poupança (período)</div>
+        <div class="value" id="poupTotal">R$ 0,00</div>
+      </div>
+
+      <div class="box">
+        <h3>Simulação de Rendimento</h3>
+        <div class="muted">Soma dos valores investimento (período)</div>
+        <div class="value" id="invTotal">R$ 0,00</div>
+      </div>
+    </aside>
+  </div>
+
+  <footer><div class="muted">Disclaimer: Simulação meramente informativa.</div></footer>
+</div>
+
+<script>
+const fmt = v => Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+
+const baseImoveis = {
+  priceParcel:937.24, priceTotal:337407.08, priceJuros:237407.08,
+  sacPrimeira:1175.28, sacUltima:277.78, sacTotal:261550, sacJuros:161550,
+  consParcela:564.50, consTaxaAdm:24200,
+  poupancaTotal:6960.30, investimentoTotal:7036.45
+};
+
+const baseCarros = {
+  cdcParcel:759.83, cdcTotal:45590.75, cdcJuros:15590.75,
+  consParcela:801.24, consTaxaAdm:8460.00,
+  poupancaTotal:9879.30, investimentoTotal:9987.36
+};
+
+let chart=null;
+function desenharGrafico(data, segmento){
+  const ctx=document.getElementById('compChart').getContext('2d');
+  if(chart) chart.destroy();
+  const datasets=[
+    {label:'Poupança',data:data.seriesPoup,borderWidth:2,fill:false,tension:0.25},
+    {label:'Investimento',data:data.seriesInv,borderWidth:2,fill:false,tension:0.25}
+  ];
+  if(segmento==='imoveis'){
+    datasets.unshift({label:'Financiamento SAC',data:data.seriesSAC,borderWidth:2,fill:false,tension:0.25});
+    datasets.unshift({label:'Financiamento Price',data:data.seriesPrice,borderWidth:2,fill:false,tension:0.25});
+  }else{
+    datasets.unshift({label:'Financiamento CDC',data:data.seriesCDC,borderWidth:2,fill:false,tension:0.25});
+  }
+  chart=new Chart(ctx,{type:'line',data:{labels:data.anos,datasets},options:{responsive:true,plugins:{legend:{position:'bottom'}}}});
+}
+
+function gerarSeries(credito,base,segmento,coefPlano){
+  const anos=[2024,2025,2026,2027,2028,2029,2030,2031,2032,2033,2034,2035,2036,2037,2038,2039,2040,2041,2042,2043,2044,2045,2046,2047,2048,2049,2050,2051,2052,2053,2054];
+  const scale=(segmento==='imoveis'?credito/100000:credito/30000);
+  const seriesPoup=anos.map((_,i)=>base.poupancaTotal*scale*Math.pow((i+1)/anos.length,0.9));
+  const seriesInv=anos.map((_,i)=>base.investimentoTotal*scale*Math.pow((i+1)/anos.length,0.88));
+  const data={anos,seriesPoup,seriesInv};
+  if(segmento==='imoveis'){
+    data.seriesPrice=anos.map((_,i)=>base.priceTotal*scale*coefPlano*((i+1)/anos.length));
+    data.seriesSAC=anos.map((_,i)=>base.sacTotal*scale*coefPlano*((i+1)/anos.length));
+  }else{
+    data.seriesCDC=anos.map((_,i)=>base.cdcTotal*scale*((i+1)/anos.length));
+  }
+  return data;
+}
+
+function atualizarTudo(){
+  const segmento=document.getElementById('segmento').value;
+  const credito=Number(document.getElementById('credito').value)||0;
+  const coefPlano=Number(document.getElementById('plano').value)||1;
+
+  const planoWrapper=document.getElementById('planoWrapper');
+  const boxPrice=document.getElementById('boxPrice');
+  const boxSAC=document.getElementById('boxSAC');
+  const boxCDC=document.getElementById('boxCDC');
+
+  if(segmento==='carros'){
+    planoWrapper.style.display='none';
+    boxPrice.style.display='none';
+    boxSAC.style.display='none';
+    boxCDC.style.display='block';
+  }else{
+    planoWrapper.style.display='flex';
+    boxPrice.style.display='block';
+    boxSAC.style.display='block';
+    boxCDC.style.display='none';
+  }
+
+  const base=segmento==='imoveis'?baseImoveis:baseCarros;
+  const scale=(segmento==='imoveis'?credito/100000:credito/30000);
+
+  const consParcelaCalc = segmento === 'imoveis'
+    ? base.consParcela * scale * coefPlano
+    : base.consParcela * scale;
+
+  const consTaxaCalc = segmento === 'imoveis'
+    ? base.consTaxaAdm * scale * coefPlano
+    : base.consTaxaAdm * scale;
+
+  document.getElementById('cons_credito').innerText=fmt(credito);
+  document.getElementById('cons_parcela').innerText=fmt(consParcelaCalc);
+  document.getElementById('cons_taxa').innerText=fmt(consTaxaCalc);
+
+  if(segmento==='imoveis'){
+    document.getElementById('priceParcel').innerText=fmt(base.priceParcel*scale);
+    document.getElementById('priceTotal').innerText=fmt(base.priceTotal*scale);
+    document.getElementById('priceJuros').innerText=fmt(base.priceJuros*scale);
+    document.getElementById('sacPrimeira').innerText=`${fmt(base.sacPrimeira*scale)} → ${fmt(base.sacUltima*scale)}`;
+    document.getElementById('sacTotal').innerText=fmt(base.sacTotal*scale);
+    document.getElementById('sacJuros').innerText=fmt(base.sacJuros*scale);
+  }else{
+    document.getElementById('cdcParcel').innerText=fmt(base.cdcParcel*scale);
+    document.getElementById('cdcTotal').innerText=fmt(base.cdcTotal*scale);
+    document.getElementById('cdcJuros').innerText=fmt(base.cdcJuros*scale);
+  }
+
+
+  document.getElementById('poupTotal').innerText=fmt(base.poupancaTotal*scale);
+  document.getElementById('invTotal').innerText=fmt(base.investimentoTotal*scale);
+
+
+  const series=gerarSeries(credito,base,segmento,1);
+  desenharGrafico(series,segmento);
+}
+
+
+document.getElementById('atualizar').addEventListener('click',atualizarTudo);
+document.getElementById('segmento').addEventListener('change',atualizarTudo);
+atualizarTudo();
+</script>
+</body>
+</html>
